@@ -1,0 +1,42 @@
+# Build output
+/build/
+/out/
+[Bb]in/
+[Oo]bj/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+compile_commands.json
+_deps/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.vcxproj.user
+*.VC.db
+*.VC.opendb
+
+# MSVC / build artifacts
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.idb
+
+# Packaging
+*.zip
+_CPack_Packages/
+
+# OS noise
+Thumbs.db
+Desktop.ini
+
+# Tooling
+.cache/
