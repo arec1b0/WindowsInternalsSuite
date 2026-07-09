@@ -48,6 +48,9 @@ public:
         HANDLE process) const = 0;
 
     // --- Thread ---
+    [[nodiscard]] virtual Result<Handle, ErrorCode> openThread(
+        std::uint32_t tid, ACCESS_MASK desiredAccess) const = 0;
+
     [[nodiscard]] virtual Result<ThreadBasicInformation, ErrorCode>
     queryThreadBasicInformation(HANDLE thread) const = 0;
 

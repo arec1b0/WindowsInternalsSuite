@@ -4,6 +4,7 @@
 
 add_library(wis_core STATIC
     src/process/ProcessManager.cpp
+    src/thread/ThreadManager.cpp
 )
 
 add_library(wis::core ALIAS wis_core)

@@ -43,6 +43,11 @@ public:
         return process_info::queryImageName(process);
     }
 
+    Result<Handle, ErrorCode> openThread(std::uint32_t tid,
+                                         ACCESS_MASK desiredAccess) const override {
+        return thread_info::open(tid, desiredAccess);
+    }
+
     Result<ThreadBasicInformation, ErrorCode> queryThreadBasicInformation(
         HANDLE thread) const override {
         return thread_info::queryBasic(thread);

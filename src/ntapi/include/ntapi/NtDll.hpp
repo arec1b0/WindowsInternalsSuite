@@ -62,6 +62,12 @@ using NtOpenProcessFn =
                      ObjectAttributes* objectAttributes,
                      ClientId* clientId);
 
+using NtOpenThreadFn =
+    NtStatus(NTAPI*)(PHANDLE threadHandle,
+                     ACCESS_MASK desiredAccess,
+                     ObjectAttributes* objectAttributes,
+                     ClientId* clientId);
+
 using NtQueryObjectFn =
     NtStatus(NTAPI*)(HANDLE handle,
                      ObjectInformationClass objectInformationClass,
@@ -107,6 +113,7 @@ public:
         return queryVirtualMemory_;
     }
     [[nodiscard]] NtOpenProcessFn openProcess() const noexcept { return openProcess_; }
+    [[nodiscard]] NtOpenThreadFn openThread() const noexcept { return openThread_; }
     [[nodiscard]] NtQueryObjectFn queryObject() const noexcept { return queryObject_; }
     [[nodiscard]] NtDuplicateObjectFn duplicateObject() const noexcept {
         return duplicateObject_;
@@ -123,6 +130,7 @@ private:
     NtWriteVirtualMemoryFn writeVirtualMemory_ = nullptr;
     NtQueryVirtualMemoryFn queryVirtualMemory_ = nullptr;
     NtOpenProcessFn openProcess_ = nullptr;
+    NtOpenThreadFn openThread_ = nullptr;
     NtQueryObjectFn queryObject_ = nullptr;
     NtDuplicateObjectFn duplicateObject_ = nullptr;
     NtCloseFn close_ = nullptr;

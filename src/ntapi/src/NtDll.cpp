@@ -31,6 +31,7 @@ NtDll::NtDll() {
     writeVirtualMemory_ = resolve<NtWriteVirtualMemoryFn>(ntdll, "NtWriteVirtualMemory");
     queryVirtualMemory_ = resolve<NtQueryVirtualMemoryFn>(ntdll, "NtQueryVirtualMemory");
     openProcess_ = resolve<NtOpenProcessFn>(ntdll, "NtOpenProcess");
+    openThread_ = resolve<NtOpenThreadFn>(ntdll, "NtOpenThread");
     queryObject_ = resolve<NtQueryObjectFn>(ntdll, "NtQueryObject");
     duplicateObject_ = resolve<NtDuplicateObjectFn>(ntdll, "NtDuplicateObject");
     close_ = resolve<NtCloseFn>(ntdll, "NtClose");
