@@ -8,6 +8,8 @@
 
 #include <windows.h>
 
+#include <string>
+
 #include "ntapi/NtStatus.hpp"
 
 namespace wis::ntapi {
@@ -252,5 +254,18 @@ struct ObjectNameInformation {
 struct ProcessCommandLineInformation {
     UnicodeString CommandLine;
 };
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
+// Copies a native counted UTF-16 string into a std::wstring. The Buffer is not
+// assumed null-terminated; Length (in bytes) is authoritative.
+[[nodiscard]] inline std::wstring unicodeStringToWide(const UnicodeString& value) {
+    if (value.Buffer == nullptr || value.Length == 0) {
+        return {};
+    }
+    return std::wstring(value.Buffer, value.Length / sizeof(wchar_t));
+}
 
 }  // namespace wis::ntapi
