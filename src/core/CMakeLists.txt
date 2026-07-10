@@ -11,6 +11,7 @@ add_library(wis_core STATIC
     src/pe/PEImports.cpp
     src/pe/PEExports.cpp
     src/pe/PEResources.cpp
+    src/pe/PEDirectories.cpp
 )
 
 add_library(wis::core ALIAS wis_core)
