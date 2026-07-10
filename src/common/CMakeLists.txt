@@ -8,6 +8,7 @@ add_library(wis_common STATIC
     src/log/Logger.cpp
     src/text/Encoding.cpp
     src/text/HexFormat.cpp
+    src/io/MappedFile.cpp
 )
 
 add_library(wis::common ALIAS wis_common)
