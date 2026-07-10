@@ -57,6 +57,11 @@ public:
         return thread_info::queryWin32StartAddress(thread);
     }
 
+    Result<MEMORY_BASIC_INFORMATION, ErrorCode> queryMemoryRegion(
+        HANDLE process, std::uint64_t address) const override {
+        return memory::queryRegion(process, address);
+    }
+
     Result<std::size_t, ErrorCode> readMemory(HANDLE process, std::uint64_t address,
                                               MutableByteSpan buffer) const override {
         return memory::read(process, address, buffer);

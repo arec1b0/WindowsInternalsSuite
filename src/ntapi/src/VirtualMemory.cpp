@@ -53,6 +53,24 @@ Result<std::size_t, ErrorCode> write(HANDLE process, std::uint64_t address,
     return static_cast<std::size_t>(bytesWritten);
 }
 
+Result<MEMORY_BASIC_INFORMATION, ErrorCode> queryRegion(HANDLE process,
+                                                        std::uint64_t address) {
+    const auto fn = NtDll::instance().queryVirtualMemory();
+    if (fn == nullptr) {
+        return makeUnexpected(ErrorCode::application("NtQueryVirtualMemory unavailable"));
+    }
+
+    MEMORY_BASIC_INFORMATION mbi{};
+    SIZE_T returnLength = 0;
+    const NtStatus status =
+        fn(process, reinterpret_cast<PVOID>(address), MemoryInformationClass::Basic, &mbi,
+           sizeof(mbi), &returnLength);
+    if (!ntSuccess(status)) {
+        return makeUnexpected(ErrorCode::fromNtStatus(status));
+    }
+    return mbi;
+}
+
 Result<std::wstring, ErrorCode> queryMappedFilename(HANDLE process, std::uint64_t address) {
     const auto fn = NtDll::instance().queryVirtualMemory();
     if (fn == nullptr) {

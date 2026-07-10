@@ -58,6 +58,9 @@ public:
         HANDLE thread) const = 0;
 
     // --- Virtual memory ---
+    [[nodiscard]] virtual Result<MEMORY_BASIC_INFORMATION, ErrorCode> queryMemoryRegion(
+        HANDLE process, std::uint64_t address) const = 0;
+
     [[nodiscard]] virtual Result<std::size_t, ErrorCode> readMemory(
         HANDLE process, std::uint64_t address, MutableByteSpan buffer) const = 0;
 

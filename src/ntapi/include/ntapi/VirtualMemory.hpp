@@ -23,6 +23,12 @@ namespace wis::ntapi::memory {
 [[nodiscard]] Result<std::size_t, ErrorCode> write(HANDLE process, std::uint64_t address,
                                                     ByteSpan buffer);
 
+// MEMORY_BASIC_INFORMATION for the region containing `address`. This is the
+// native equivalent of VirtualQueryEx; the walk terminates when it returns
+// STATUS_INVALID_PARAMETER (address past the user-mode boundary).
+[[nodiscard]] Result<MEMORY_BASIC_INFORMATION, ErrorCode> queryRegion(HANDLE process,
+                                                                      std::uint64_t address);
+
 // Native device-path name of the file backing a mapped region, if any.
 [[nodiscard]] Result<std::wstring, ErrorCode> queryMappedFilename(HANDLE process,
                                                                   std::uint64_t address);

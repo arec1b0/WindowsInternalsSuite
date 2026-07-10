@@ -5,6 +5,8 @@
 add_library(wis_core STATIC
     src/process/ProcessManager.cpp
     src/thread/ThreadManager.cpp
+    src/memory/MemoryManager.cpp
+    src/memory/SignatureScanner.cpp
 )
 
 add_library(wis::core ALIAS wis_core)
