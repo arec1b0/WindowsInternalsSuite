@@ -5,8 +5,11 @@ processes, threads, virtual memory, PE files, kernel objects, tokens, heaps, and
 the PEB/TEB. Conceptually similar to the Sysinternals utilities, but unified into
 one modular, extensible tool.
 
-> **Status: early development.** The build foundation and the lower layers
-> (`common`, `ntapi`) are in place; domain modules land incrementally. See
+> **Status: in development.** The `common` and `ntapi` layers are complete, and
+> most of the `core` domain layer is implemented and building — the process,
+> thread, memory, PE, module, and handle managers all land through the
+> `INativeApi` seam. The remaining `core` modules (token, heap, PEB/TEB), the UI,
+> the app entry point, and the test suites are not started yet. See
 > [Project status](#project-status) for the exact per-module state — the tree in
 > [Architecture](#architecture) shows the *target* design, not what is shipped today.
 
@@ -119,7 +122,7 @@ WindowsInternalsSuite/
 ├── cmake/            shared CMake modules (flags, warnings, deps, packaging)
 ├── docs/             architecture notes and per-module documentation
 ├── src/
-│   ├── common/       Result, RAII wrappers, logger, encoding, hex formatting
+│   ├── common/       Result, RAII, logger, encoding, hex, mapped file
 │   ├── ntapi/        NtDll binding, native structs, INativeApi seam
 │   ├── core/         domain managers (process, thread, memory, pe, ...)
 │   ├── ui/           viewmodels + Win32 views
@@ -132,29 +135,30 @@ WindowsInternalsSuite/
 
 ## Project status
 
-The lower layers are implemented and building; the domain and UI layers are in
-progress. This table tracks reality, not intent.
+The foundation and most of the `core` domain layer are implemented and building;
+the remaining `core` modules, the UI, and the tests are not started. This table
+tracks reality, not intent.
 
-| Layer / module            | State           | Notes                                            |
-| ------------------------- | --------------- | ------------------------------------------------ |
-| Build foundation          | ✅ Done         | CMake, presets, compiler/warning modules         |
-| `common`                  | ✅ Done         | Result, RAII, logging, encoding, hex             |
-| `ntapi`                   | ✅ Core done    | Binding + system/process/thread/memory/object    |
-| `core` · Process          | 🟡 Partial      | Enumeration + details; process control pending   |
-| `core` · Thread           | 🟡 Partial      | Enumeration + details; stack walk pending        |
-| `core` · Memory           | ⬜ Planned      | Region map, read, signature scan, dump           |
-| `core` · PE               | ⬜ Planned      | Headers, sections, imports/exports, resources    |
-| `core` · Module           | ⬜ Planned      | Loaded DLLs, base/entry, signature, version      |
-| `core` · Handle           | ⬜ Planned      | System-wide handle table, per-object detail      |
-| `core` · Token            | ⬜ Planned      | SID, integrity, privileges, groups               |
-| `core` · Heap             | ⬜ Planned      | Heap segments and allocated blocks               |
-| `core` · PEB/TEB          | ⬜ Planned      | Process/thread environment blocks                |
-| `core` · System info      | ⬜ Planned      | CPU, NUMA, RAM, cache, uptime, pagefile          |
-| `core` · Native API monitor| ⬜ Planned     | Observed native call surface                     |
-| `ui` (viewmodels + Win32) | ⬜ Planned      | Not started                                      |
-| `app` (entry point)       | ⬜ Planned      | Not started                                      |
-| Tests                     | ⬜ Planned      | Scaffolding exists; suites pending               |
-| Documentation             | 🟡 In progress  | This README; per-module docs pending             |
+| Layer / module            | State           | Notes                                             |
+| ------------------------- | --------------- | ------------------------------------------------- |
+| Build foundation          | ✅ Done         | CMake, presets, compiler/warning/analysis modules |
+| `common`                  | ✅ Done         | Result, RAII, logging, encoding, hex, mapped file |
+| `ntapi`                   | ✅ Done         | ntdll binding, native structs, `INativeApi` seam  |
+| `core` · Process          | 🟡 Partial      | Enumeration + details; process control pending    |
+| `core` · Thread           | 🟡 Partial      | Enumeration + details; stack walk pending         |
+| `core` · Memory           | ✅ Done         | Region map, partial reads, signature scan         |
+| `core` · PE               | ✅ Done         | Headers, sections, imports/exports/resources, dirs|
+| `core` · Module           | ✅ Done         | Loaded DLLs, base/entry/size, version, signature  |
+| `core` · Handle           | ✅ Done         | System-wide handles, type table, name resolution  |
+| `core` · Token            | ⬜ Planned      | SID, integrity, privileges, groups                |
+| `core` · Heap             | ⬜ Planned      | Heap segments and allocated blocks                |
+| `core` · PEB/TEB          | ⬜ Planned      | Process/thread environment blocks                 |
+| `core` · System info      | ⬜ Planned      | CPU, NUMA, RAM, cache, uptime, pagefile           |
+| `core` · Native API monitor| ⬜ Planned     | Observed native call surface                      |
+| `ui` (viewmodels + Win32) | ⬜ Planned      | Not started                                       |
+| `app` (entry point)       | ⬜ Planned      | Not started                                       |
+| Tests                     | ⬜ Planned      | CMake wiring ready; `tests/` not yet added        |
+| Documentation             | 🟡 In progress  | This README; per-module docs pending              |
 
 Legend: ✅ done · 🟡 partial · ⬜ planned
 
@@ -162,10 +166,12 @@ Legend: ✅ done · 🟡 partial · ⬜ planned
 
 ## Testing
 
-Unit tests target the layers that can be exercised without live OS state: the
-`common` primitives (`Result`, RAII wrappers, hex formatting) and the `core`
-domain logic, which is tested against a fake `INativeApi` implementation rather
-than the real `ntdll`. Once built:
+The design keeps the testable layers isolated so they can be exercised without
+live OS state: the `common` primitives (`Result`, RAII wrappers, hex formatting)
+are self-contained, and the `core` domain logic depends only on the `INativeApi`
+seam, so it can run against a fake native backend instead of the real `ntdll`.
+The CMake test wiring is in place and guarded on `WIS_BUILD_TESTS`, but the
+`tests/` tree and its suites have not been added yet. Once they land:
 
 ```powershell
 ctest --preset vs2022-debug
@@ -175,14 +181,16 @@ ctest --preset vs2022-debug
 
 ## Roadmap
 
-1. Finish the `core` domain modules (Memory and PE are the largest).
+1. Finish the remaining `core` modules: token, heap, and PEB/TEB inspection.
 2. Add process/thread control (terminate, suspend, resume) behind explicit
    confirmation, kept separate from the read-only enumeration paths.
 3. Thread stack walking with symbol resolution (`dbghelp` / `SymbolResolver`).
-4. Build the Win32 UI: viewmodels first (testable, Win32-free), then the view
+4. Stand up the `tests/` tree: `common` unit tests plus `core` suites driven by
+   a fake `INativeApi`.
+5. Build the Win32 UI: viewmodels first (testable, Win32-free), then the view
    backend, with enumeration moved off the UI thread.
-5. Optional extras: Capstone disassembly, digital-signature analysis, report
-   export (JSON/HTML), light/dark themes, plugins.
+6. Optional extras: Capstone disassembly, report export (JSON/HTML), light/dark
+   themes, plugins.
 
 ---
 
