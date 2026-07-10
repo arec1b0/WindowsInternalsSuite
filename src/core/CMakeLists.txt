@@ -8,6 +8,9 @@ add_library(wis_core STATIC
     src/memory/MemoryManager.cpp
     src/memory/SignatureScanner.cpp
     src/pe/PEParser.cpp
+    src/pe/PEImports.cpp
+    src/pe/PEExports.cpp
+    src/pe/PEResources.cpp
 )
 
 add_library(wis::core ALIAS wis_core)
