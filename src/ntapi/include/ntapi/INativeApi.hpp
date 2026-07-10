@@ -20,6 +20,13 @@
 
 namespace wis::ntapi {
 
+// Raw module placement within a process address space.
+struct ModuleRawInfo {
+    std::uint64_t baseAddress = 0;
+    std::uint64_t entryPoint = 0;
+    std::uint32_t sizeOfImage = 0;
+};
+
 class INativeApi {
 public:
     virtual ~INativeApi() = default;
@@ -79,6 +86,19 @@ public:
 
     [[nodiscard]] virtual Result<Handle, ErrorCode> duplicateHandle(
         HANDLE sourceProcess, HANDLE sourceHandle) const = 0;
+
+    // --- Modules ---
+    // Raw module handle (base address) list for a process, via EnumProcessModulesEx.
+    [[nodiscard]] virtual Result<std::vector<std::uint64_t>, ErrorCode> enumProcessModules(
+        HANDLE process) const = 0;
+
+    // Fully-qualified image path of a module within a process.
+    [[nodiscard]] virtual Result<std::wstring, ErrorCode> queryModuleFileName(
+        HANDLE process, std::uint64_t moduleBase) const = 0;
+
+    // MODULEINFO (base, size, entry point) for a module within a process.
+    [[nodiscard]] virtual Result<ModuleRawInfo, ErrorCode> queryModuleInformation(
+        HANDLE process, std::uint64_t moduleBase) const = 0;
 };
 
 // Factory for the production implementation (delegates to ntdll wrappers).

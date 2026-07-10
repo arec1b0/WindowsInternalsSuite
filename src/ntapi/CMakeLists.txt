@@ -24,4 +24,5 @@ target_link_libraries(wis_ntapi
         wis::common
     PRIVATE
         wis_project_warnings
+        psapi   # EnumProcessModulesEx / GetModuleFileNameExW / GetModuleInformation
 )

@@ -12,6 +12,8 @@ add_library(wis_core STATIC
     src/pe/PEExports.cpp
     src/pe/PEResources.cpp
     src/pe/PEDirectories.cpp
+    src/module/ModuleManager.cpp
+    src/module/FileMetadata.cpp
 )
 
 add_library(wis::core ALIAS wis_core)
@@ -28,4 +30,7 @@ target_link_libraries(wis_core
         wis::ntapi
     PRIVATE
         wis_project_warnings
+        version    # GetFileVersionInfo / VerQueryValue
+        wintrust   # WinVerifyTrust (Authenticode)
+        crypt32    # certificate context extraction
 )

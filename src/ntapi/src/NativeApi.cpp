@@ -6,6 +6,8 @@
 #include "ntapi/ThreadInformation.hpp"
 #include "ntapi/VirtualMemory.hpp"
 
+#include <psapi.h>
+
 namespace wis::ntapi {
 namespace {
 
@@ -88,6 +90,69 @@ public:
     Result<Handle, ErrorCode> duplicateHandle(HANDLE sourceProcess,
                                               HANDLE sourceHandle) const override {
         return object_info::duplicateIntoSelf(sourceProcess, sourceHandle);
+    }
+
+    Result<std::vector<std::uint64_t>, ErrorCode> enumProcessModules(
+        HANDLE process) const override {
+        // Two-pass: first call sizes the array, second fills it. LIST_MODULES_ALL
+        // returns both 32- and 64-bit modules where applicable.
+        DWORD needed = 0;
+        if (::EnumProcessModulesEx(process, nullptr, 0, &needed, LIST_MODULES_ALL) == FALSE) {
+            return makeUnexpected(ErrorCode::fromLastError());
+        }
+        if (needed == 0) {
+            return std::vector<std::uint64_t>{};
+        }
+
+        std::vector<HMODULE> handles(needed / sizeof(HMODULE));
+        DWORD returned = 0;
+        if (::EnumProcessModulesEx(process, handles.data(),
+                                   static_cast<DWORD>(handles.size() * sizeof(HMODULE)),
+                                   &returned, LIST_MODULES_ALL) == FALSE) {
+            return makeUnexpected(ErrorCode::fromLastError());
+        }
+
+        const std::size_t count = returned / sizeof(HMODULE);
+        std::vector<std::uint64_t> bases;
+        bases.reserve(count);
+        for (std::size_t i = 0; i < count; ++i) {
+            bases.push_back(reinterpret_cast<std::uint64_t>(handles[i]));
+        }
+        return bases;
+    }
+
+    Result<std::wstring, ErrorCode> queryModuleFileName(
+        HANDLE process, std::uint64_t moduleBase) const override {
+        std::wstring path(1024, L'\0');
+        for (int attempt = 0; attempt < 4; ++attempt) {
+            const DWORD length = ::GetModuleFileNameExW(
+                process, reinterpret_cast<HMODULE>(moduleBase), path.data(),
+                static_cast<DWORD>(path.size()));
+            if (length == 0) {
+                return makeUnexpected(ErrorCode::fromLastError());
+            }
+            // Truncation is signaled by length == buffer size; grow and retry.
+            if (length < path.size()) {
+                path.resize(length);
+                return path;
+            }
+            path.resize(path.size() * 2);
+        }
+        return makeUnexpected(ErrorCode::application("Module path exceeds buffer growth"));
+    }
+
+    Result<ModuleRawInfo, ErrorCode> queryModuleInformation(
+        HANDLE process, std::uint64_t moduleBase) const override {
+        MODULEINFO mi{};
+        if (::GetModuleInformation(process, reinterpret_cast<HMODULE>(moduleBase), &mi,
+                                   sizeof(mi)) == FALSE) {
+            return makeUnexpected(ErrorCode::fromLastError());
+        }
+        ModuleRawInfo info;
+        info.baseAddress = reinterpret_cast<std::uint64_t>(mi.lpBaseOfDll);
+        info.entryPoint = reinterpret_cast<std::uint64_t>(mi.EntryPoint);
+        info.sizeOfImage = mi.SizeOfImage;
+        return info;
     }
 };
 
