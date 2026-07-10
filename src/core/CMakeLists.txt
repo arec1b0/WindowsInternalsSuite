@@ -14,6 +14,8 @@ add_library(wis_core STATIC
     src/pe/PEDirectories.cpp
     src/module/ModuleManager.cpp
     src/module/FileMetadata.cpp
+    src/handle/ObjectTypeTable.cpp
+    src/handle/HandleManager.cpp
 )
 
 add_library(wis::core ALIAS wis_core)

@@ -59,6 +59,20 @@ Result<std::wstring, ErrorCode> queryType(HANDLE handle) {
     return unicodeStringToWide(info->TypeName);
 }
 
+Result<std::vector<std::byte>, ErrorCode> queryAllTypes() {
+    const auto fn = NtDll::instance().queryObject();
+    if (fn == nullptr) {
+        return makeUnexpected(ErrorCode::application("NtQueryObject unavailable"));
+    }
+    // ObjectTypesInformation is queried against a null handle; it returns the
+    // system-wide type table. 8 KiB initial comfortably fits ~60 types.
+    return detail::queryIntoGrowingBuffer<ULONG>(
+        [&](void* buffer, ULONG length, ULONG* returnLength) {
+            return fn(nullptr, ObjectInformationClass::Types, buffer, length, returnLength);
+        },
+        0x2000);
+}
+
 Result<Handle, ErrorCode> duplicateIntoSelf(HANDLE sourceProcess, HANDLE sourceHandle) {
     const auto fn = NtDll::instance().duplicateObject();
     if (fn == nullptr) {

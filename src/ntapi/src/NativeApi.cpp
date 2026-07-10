@@ -87,6 +87,10 @@ public:
         return object_info::queryType(handle);
     }
 
+    Result<std::vector<std::byte>, ErrorCode> queryObjectTypes() const override {
+        return object_info::queryAllTypes();
+    }
+
     Result<Handle, ErrorCode> duplicateHandle(HANDLE sourceProcess,
                                               HANDLE sourceHandle) const override {
         return object_info::duplicateIntoSelf(sourceProcess, sourceHandle);

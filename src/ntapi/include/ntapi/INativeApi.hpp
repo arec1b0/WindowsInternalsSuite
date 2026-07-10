@@ -84,6 +84,9 @@ public:
     [[nodiscard]] virtual Result<std::wstring, ErrorCode> queryObjectType(
         HANDLE handle) const = 0;
 
+    [[nodiscard]] virtual Result<std::vector<std::byte>, ErrorCode> queryObjectTypes()
+        const = 0;
+
     [[nodiscard]] virtual Result<Handle, ErrorCode> duplicateHandle(
         HANDLE sourceProcess, HANDLE sourceHandle) const = 0;
 

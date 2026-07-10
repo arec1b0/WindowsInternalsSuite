@@ -2,7 +2,9 @@
 
 // Wrappers over NtQueryObject and NtDuplicateObject.
 
+#include <cstddef>
 #include <string>
+#include <vector>
 
 #include "common/error/ErrorCode.hpp"
 #include "common/error/Result.hpp"
@@ -19,6 +21,10 @@ namespace wis::ntapi::object_info {
 
 // Object type name (e.g. "File", "Key", "Process", "Mutant", "Section").
 [[nodiscard]] Result<std::wstring, ErrorCode> queryType(HANDLE handle);
+
+// Full object-type table (NtQueryObject with ObjectTypesInformation). Returns
+// an owned buffer; the caller walks the OBJECT_TYPES_INFORMATION layout.
+[[nodiscard]] Result<std::vector<std::byte>, ErrorCode> queryAllTypes();
 
 // Duplicates a handle from a foreign process into the current process with the
 // same granted access, so it can be inspected locally.
