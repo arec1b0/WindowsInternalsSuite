@@ -16,6 +16,7 @@
 #include "common/error/Result.hpp"
 #include "common/raii/UniqueHandle.hpp"
 #include "common/util/ByteSpan.hpp"
+#include "ntapi/DebugBuffer.hpp"
 #include "ntapi/NtTypes.hpp"
 
 namespace wis::ntapi {
@@ -102,6 +103,10 @@ public:
     // MODULEINFO (base, size, entry point) for a module within a process.
     [[nodiscard]] virtual Result<ModuleRawInfo, ErrorCode> queryModuleInformation(
         HANDLE process, std::uint64_t moduleBase) const = 0;
+
+    // --- Heaps ---
+    [[nodiscard]] virtual Result<std::vector<HeapSummary>, ErrorCode> queryProcessHeaps(
+        std::uint32_t pid) const = 0;
 };
 
 // Factory for the production implementation (delegates to ntdll wrappers).

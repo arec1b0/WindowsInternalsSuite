@@ -268,4 +268,64 @@ struct ProcessCommandLineInformation {
     return std::wstring(value.Buffer, value.Length / sizeof(wchar_t));
 }
 
+// -----------------------------------------------------------------------------
+// Debug-buffer heap information (RtlQueryProcessDebugInformation)
+// -----------------------------------------------------------------------------
+
+// Query flags for RtlQueryProcessDebugInformation.
+namespace debug_query {
+constexpr ULONG Modules       = 0x00000001UL;  // RTL_QUERY_PROCESS_MODULES
+constexpr ULONG HeapSummary   = 0x00000004UL;  // RTL_QUERY_PROCESS_HEAP_SUMMARY
+constexpr ULONG Heaps         = 0x00000008UL;  // RTL_QUERY_PROCESS_HEAPS
+constexpr ULONG HeapEntries   = 0x00000010UL;  // RTL_QUERY_PROCESS_HEAP_ENTRIES
+}  // namespace debug_query
+
+// Per-heap summary record within RTL_PROCESS_HEAPS.
+struct RtlHeapInformation {
+    PVOID BaseAddress;
+    ULONG Flags;
+    USHORT EntryOverhead;
+    USHORT CreatorBackTraceIndex;
+    SIZE_T BytesAllocated;
+    SIZE_T BytesCommitted;
+    ULONG NumberOfTags;
+    ULONG NumberOfEntries;      // allocated block count
+    ULONG NumberOfPseudoTags;
+    ULONG PseudoTagGranularity;
+    ULONG Reserved[5];
+    PVOID Tags;
+    PVOID Entries;              // valid only when HeapEntries was requested
+};
+
+// Variable-length: Heaps[NumberOfHeaps] follows the header inline.
+struct RtlProcessHeaps {
+    ULONG NumberOfHeaps;
+    RtlHeapInformation Heaps[1];
+};
+
+// Opaque debug buffer header. Only the Heap/Module info pointers are needed; the
+// rest of the (large) structure is reserved so sizeof is not relied upon — the
+// buffer is always allocated by RtlCreateQueryDebugBuffer, never by us.
+struct RtlDebugInformation {
+    HANDLE SectionHandleClient;
+    PVOID ViewBaseClient;
+    PVOID ViewBaseTarget;
+    ULONG_PTR ViewBaseDelta;
+    HANDLE EventPairClient;
+    HANDLE EventPairTarget;
+    HANDLE TargetProcessId;
+    HANDLE TargetThreadHandle;
+    ULONG Flags;
+    SIZE_T OffsetFree;
+    SIZE_T CommitSize;
+    SIZE_T ViewSize;
+    PVOID Modules;                 // RTL_PROCESS_MODULES* (when Modules queried)
+    PVOID BackTraces;
+    RtlProcessHeaps* Heaps;        // RTL_PROCESS_HEAPS* (when Heaps queried)
+    PVOID Locks;
+    PVOID SpecificHeap;
+    HANDLE TargetProcessHandle;
+    PVOID Reserved[6];
+};
+
 }  // namespace wis::ntapi

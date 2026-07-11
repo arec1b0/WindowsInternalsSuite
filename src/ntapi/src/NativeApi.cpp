@@ -1,5 +1,6 @@
 #include "ntapi/INativeApi.hpp"
 
+#include "ntapi/DebugBuffer.hpp"
 #include "ntapi/ObjectInformation.hpp"
 #include "ntapi/ProcessInformation.hpp"
 #include "ntapi/SystemInformation.hpp"
@@ -157,6 +158,11 @@ public:
         info.entryPoint = reinterpret_cast<std::uint64_t>(mi.EntryPoint);
         info.sizeOfImage = mi.SizeOfImage;
         return info;
+    }
+
+    Result<std::vector<HeapSummary>, ErrorCode> queryProcessHeaps(
+        std::uint32_t pid) const override {
+        return ntapi::queryProcessHeaps(pid);
     }
 };
 

@@ -8,6 +8,7 @@ add_library(wis_ntapi STATIC
     src/ThreadInformation.cpp
     src/VirtualMemory.cpp
     src/ObjectInformation.cpp
+    src/DebugBuffer.cpp
     src/NativeApi.cpp
 )
 

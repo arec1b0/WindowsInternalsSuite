@@ -86,6 +86,16 @@ using NtDuplicateObjectFn =
 
 using NtCloseFn = NtStatus(NTAPI*)(HANDLE handle);
 
+// Debug-buffer heap/module query trio (ntdll). RtlCreateQueryDebugBuffer
+// allocates an opaque buffer; RtlQueryProcessDebugInformation fills it for a
+// target PID; RtlDestroyQueryDebugBuffer frees it.
+using RtlCreateQueryDebugBufferFn = PVOID(NTAPI*)(ULONG size, BOOLEAN eventPair);
+
+using RtlQueryProcessDebugInformationFn =
+    NtStatus(NTAPI*)(HANDLE uniqueProcessId, ULONG flags, PVOID debugBuffer);
+
+using RtlDestroyQueryDebugBufferFn = NtStatus(NTAPI*)(PVOID debugBuffer);
+
 // Resolved ntdll entry points. Accessed as an immutable singleton.
 class NtDll {
 public:
@@ -120,6 +130,17 @@ public:
     }
     [[nodiscard]] NtCloseFn close() const noexcept { return close_; }
 
+    [[nodiscard]] RtlCreateQueryDebugBufferFn createQueryDebugBuffer() const noexcept {
+        return createQueryDebugBuffer_;
+    }
+    [[nodiscard]] RtlQueryProcessDebugInformationFn queryProcessDebugInformation()
+        const noexcept {
+        return queryProcessDebugInformation_;
+    }
+    [[nodiscard]] RtlDestroyQueryDebugBufferFn destroyQueryDebugBuffer() const noexcept {
+        return destroyQueryDebugBuffer_;
+    }
+
 private:
     NtDll();
 
@@ -134,6 +155,9 @@ private:
     NtQueryObjectFn queryObject_ = nullptr;
     NtDuplicateObjectFn duplicateObject_ = nullptr;
     NtCloseFn close_ = nullptr;
+    RtlCreateQueryDebugBufferFn createQueryDebugBuffer_ = nullptr;
+    RtlQueryProcessDebugInformationFn queryProcessDebugInformation_ = nullptr;
+    RtlDestroyQueryDebugBufferFn destroyQueryDebugBuffer_ = nullptr;
 };
 
 }  // namespace wis::ntapi

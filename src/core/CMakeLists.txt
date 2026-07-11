@@ -17,6 +17,7 @@ add_library(wis_core STATIC
     src/handle/ObjectTypeTable.cpp
     src/handle/HandleManager.cpp
     src/token/TokenInspector.cpp
+    src/heap/HeapInspector.cpp
 )
 
 add_library(wis::core ALIAS wis_core)

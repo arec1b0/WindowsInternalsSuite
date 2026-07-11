@@ -35,6 +35,12 @@ NtDll::NtDll() {
     queryObject_ = resolve<NtQueryObjectFn>(ntdll, "NtQueryObject");
     duplicateObject_ = resolve<NtDuplicateObjectFn>(ntdll, "NtDuplicateObject");
     close_ = resolve<NtCloseFn>(ntdll, "NtClose");
+    createQueryDebugBuffer_ =
+        resolve<RtlCreateQueryDebugBufferFn>(ntdll, "RtlCreateQueryDebugBuffer");
+    queryProcessDebugInformation_ =
+        resolve<RtlQueryProcessDebugInformationFn>(ntdll, "RtlQueryProcessDebugInformation");
+    destroyQueryDebugBuffer_ =
+        resolve<RtlDestroyQueryDebugBufferFn>(ntdll, "RtlDestroyQueryDebugBuffer");
 }
 
 const NtDll& NtDll::instance() {
