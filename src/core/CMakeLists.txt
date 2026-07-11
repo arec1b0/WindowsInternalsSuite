@@ -16,6 +16,7 @@ add_library(wis_core STATIC
     src/module/FileMetadata.cpp
     src/handle/ObjectTypeTable.cpp
     src/handle/HandleManager.cpp
+    src/token/TokenInspector.cpp
 )
 
 add_library(wis::core ALIAS wis_core)
@@ -35,4 +36,5 @@ target_link_libraries(wis_core
         version    # GetFileVersionInfo / VerQueryValue
         wintrust   # WinVerifyTrust (Authenticode)
         crypt32    # certificate context extraction
+        advapi32   # token / SID / privilege APIs
 )
