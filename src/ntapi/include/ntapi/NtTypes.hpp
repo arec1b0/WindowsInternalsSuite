@@ -8,6 +8,7 @@
 
 #include <windows.h>
 
+#include <cstddef>
 #include <string>
 
 #include "ntapi/NtStatus.hpp"
@@ -327,5 +328,107 @@ struct RtlDebugInformation {
     HANDLE TargetProcessHandle;
     PVOID Reserved[6];
 };
+
+// -----------------------------------------------------------------------------
+// PEB / TEB (partial layouts, x64)
+// -----------------------------------------------------------------------------
+//
+// These are deliberately PARTIAL: only the fields this suite reads are declared,
+// with explicit padding to hold the offsets. Declaring the full PEB/TEB would
+// bind the build to a specific Windows build's internal layout for no benefit.
+// The offsets below are stable across Windows 10/11 x64.
+
+#pragma pack(push, 1)
+
+// PEB fields up to ProcessHeap (offset 0x38).
+struct PebPartial {
+    BOOLEAN InheritedAddressSpace;      // 0x00
+    BOOLEAN ReadImageFileExecOptions;   // 0x01
+    BOOLEAN BeingDebugged;              // 0x02
+    BOOLEAN BitField;                   // 0x03
+    UCHAR Padding0[4];                  // 0x04
+    PVOID Mutant;                       // 0x08
+    PVOID ImageBaseAddress;             // 0x10
+    PVOID Ldr;                          // 0x18  PEB_LDR_DATA*
+    PVOID ProcessParameters;            // 0x20  RTL_USER_PROCESS_PARAMETERS*
+    PVOID SubSystemData;                // 0x28
+    PVOID ProcessHeap;                  // 0x30
+    PVOID FastPebLock;                  // 0x38
+};
+static_assert(offsetof(PebPartial, BeingDebugged) == 0x02, "PEB.BeingDebugged offset");
+static_assert(offsetof(PebPartial, ImageBaseAddress) == 0x10, "PEB.ImageBaseAddress offset");
+static_assert(offsetof(PebPartial, Ldr) == 0x18, "PEB.Ldr offset");
+static_assert(offsetof(PebPartial, ProcessParameters) == 0x20, "PEB.ProcessParameters offset");
+static_assert(offsetof(PebPartial, ProcessHeap) == 0x30, "PEB.ProcessHeap offset");
+
+// PEB_LDR_DATA fields up to the module list heads.
+struct PebLdrDataPartial {
+    ULONG Length;                              // 0x00
+    BOOLEAN Initialized;                       // 0x04
+    UCHAR Padding0[3];                         // 0x05
+    PVOID SsHandle;                            // 0x08
+    LIST_ENTRY InLoadOrderModuleList;          // 0x10
+    LIST_ENTRY InMemoryOrderModuleList;        // 0x20
+    LIST_ENTRY InInitializationOrderModuleList;// 0x30
+};
+static_assert(offsetof(PebLdrDataPartial, InLoadOrderModuleList) == 0x10,
+              "PEB_LDR_DATA.InLoadOrderModuleList offset");
+
+// RTL_USER_PROCESS_PARAMETERS fields up to CommandLine (offset 0x70).
+struct RtlUserProcessParametersPartial {
+    ULONG MaximumLength;          // 0x00
+    ULONG Length;                 // 0x04
+    ULONG Flags;                  // 0x08
+    ULONG DebugFlags;             // 0x0C
+    PVOID ConsoleHandle;          // 0x10
+    ULONG ConsoleFlags;           // 0x18
+    UCHAR Padding0[4];            // 0x1C
+    PVOID StandardInput;          // 0x20
+    PVOID StandardOutput;         // 0x28
+    PVOID StandardError;          // 0x30
+    UnicodeString CurrentDirPath; // 0x38  (CURDIR.DosPath)
+    PVOID CurrentDirHandle;       // 0x48  (CURDIR.Handle)
+    UnicodeString DllPath;        // 0x50
+    UnicodeString ImagePathName;  // 0x60
+    UnicodeString CommandLine;    // 0x70
+};
+static_assert(offsetof(RtlUserProcessParametersPartial, CurrentDirPath) == 0x38,
+              "RTL_USER_PROCESS_PARAMETERS.CurrentDirectory offset");
+static_assert(offsetof(RtlUserProcessParametersPartial, ImagePathName) == 0x60,
+              "RTL_USER_PROCESS_PARAMETERS.ImagePathName offset");
+static_assert(offsetof(RtlUserProcessParametersPartial, CommandLine) == 0x70,
+              "RTL_USER_PROCESS_PARAMETERS.CommandLine offset");
+
+// TEB fields up to LastErrorValue (offset 0x68). NT_TIB occupies 0x00..0x37.
+struct TebPartial {
+    PVOID ExceptionList;              // 0x00  NtTib.ExceptionList
+    PVOID StackBase;                  // 0x08  NtTib.StackBase
+    PVOID StackLimit;                 // 0x10  NtTib.StackLimit
+    PVOID SubSystemTib;               // 0x18
+    PVOID FiberData;                  // 0x20
+    PVOID ArbitraryUserPointer;       // 0x28
+    PVOID Self;                       // 0x30  NtTib.Self
+    PVOID EnvironmentPointer;         // 0x38
+    ClientId TebClientId;             // 0x40
+    PVOID ActiveRpcHandle;            // 0x50
+    PVOID ThreadLocalStoragePointer;  // 0x58
+    PVOID ProcessEnvironmentBlock;    // 0x60  -> PEB
+    ULONG LastErrorValue;             // 0x68
+};
+static_assert(offsetof(TebPartial, StackBase) == 0x08, "TEB.NtTib.StackBase offset");
+static_assert(offsetof(TebPartial, StackLimit) == 0x10, "TEB.NtTib.StackLimit offset");
+static_assert(offsetof(TebPartial, ThreadLocalStoragePointer) == 0x58,
+              "TEB.ThreadLocalStoragePointer offset");
+static_assert(offsetof(TebPartial, ProcessEnvironmentBlock) == 0x60, "TEB.PEB offset");
+static_assert(offsetof(TebPartial, LastErrorValue) == 0x68, "TEB.LastErrorValue offset");
+
+#pragma pack(pop)
+
+// TLS slot array lives deep inside the TEB; read it by offset rather than
+// declaring the ~6 KB of intervening fields.
+namespace teb_offsets {
+constexpr std::uint32_t TlsSlotsX64 = 0x1480;  // PVOID TlsSlots[64]
+constexpr std::uint32_t TlsSlotCount = 64;     // TLS_MINIMUM_AVAILABLE
+}  // namespace teb_offsets
 
 }  // namespace wis::ntapi
