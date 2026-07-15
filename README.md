@@ -7,9 +7,12 @@ one modular, extensible tool.
 
 > **Status: in development.** The `common` and `ntapi` layers are complete, and
 > most of the `core` domain layer is implemented and building — the process,
-> thread, memory, PE, module, handle, token, heap, PEB/TEB, and system info providers all land through the
-> `INativeApi` seam. The remaining `core` module (Native API monitor), the UI,
-> the app entry point, and the test suites are not started yet. See
+> thread, memory, PE, module, handle, token, heap, PEB/TEB, system info, and
+> symbol resolution providers all land through the `INativeApi` seam (symbols
+> via `dbghelp`). The `ui` layer has started: the Win32-free viewmodel contracts
+> and the first view model (`ProcessExplorerVM`) are in place, but the Win32
+> view backend is not. The remaining `core` module (Native API monitor), the
+> Win32 views, the app entry point, and the test suites are not started yet. See
 > [Project status](#project-status) for the exact per-module state — the tree in
 > [Architecture](#architecture) shows the *target* design, not what is shipped today.
 
@@ -95,7 +98,7 @@ app            composition root: wires the dependency graph, owns main()
  │
 ui             Win32-free viewmodels + a swappable Win32 view backend
  │
-core           domain logic: process/thread/memory/pe/handle/token/heap/pebteb/system/... managers & providers
+core           domain logic: process/thread/memory/pe/handle/token/heap/pebteb/system/symbols/... managers & providers
  │
 ntapi          typed wrappers over ntdll, behind the INativeApi interface
  │
@@ -105,7 +108,7 @@ common         cross-cutting primitives: Result<T,E>, RAII, logging, text
 ### Design principles
 
 - **SOLID**, applied pragmatically. The most load-bearing part is DIP: `core`
-  and `ui` depend on interfaces (`INativeApi`, `IProcessManager`, `ITokenInspector`, `IHeapInspector`, `IPebTebReader`, `ISystemInfoProvider`, …), never on
+  and `ui` depend on interfaces (`INativeApi`, `IProcessManager`, `ITokenInspector`, `IHeapInspector`, `IPebTebReader`, `ISystemInfoProvider`, `ISymbolResolver`, `IViewModel`, …), never on
   concrete implementations.
 - **RAII everywhere** for OS resources — handles, `LocalAlloc` buffers,
   `VirtualAlloc` regions, and token privileges each have an owning wrapper.
@@ -124,7 +127,7 @@ WindowsInternalsSuite/
 ├── src/
 │   ├── common/       Result, RAII, logger, encoding, hex, mapped file
 │   ├── ntapi/        NtDll binding, native structs, INativeApi seam
-│   ├── core/         domain managers/providers (process, thread, memory, pe, handle, token, heap, pebteb, system, ...)
+│   ├── core/         domain managers/providers (process, thread, memory, pe, handle, token, heap, pebteb, system, symbols, ...)
 │   ├── ui/           viewmodels + Win32 views
 │   └── app/          main(), composition root, manifest, resources
 ├── tests/            unit tests (GoogleTest) + native-API fakes
@@ -135,9 +138,10 @@ WindowsInternalsSuite/
 
 ## Project status
 
-The foundation and most of the `core` domain layer are implemented and building;
-the remaining `core` modules, the UI, and the tests are not started. This table
-tracks reality, not intent.
+The foundation and most of the `core` domain layer are implemented and building,
+and the first slice of the `ui` layer (viewmodel contracts + `ProcessExplorerVM`)
+is in place; the Native API monitor, the Win32 views, the app entry point, and
+the tests are not started. This table tracks reality, not intent.
 
 | Layer / module            | State           | Notes                                             |
 | ------------------------- | --------------- | ------------------------------------------------- |
@@ -154,8 +158,10 @@ tracks reality, not intent.
 | `core` · Heap             | ✅ Done         | Heap segments and allocated blocks                |
 | `core` · PEB/TEB          | ✅ Done         | Process/thread environment blocks                 |
 | `core` · System info      | ✅ Done         | CPU, NUMA, RAM, cache, OS version, uptime, pagefile|
+| `core` · Symbols          | ✅ Done         | dbghelp address→`module!symbol+offset`, thread-safe|
 | `core` · Native API monitor| ⬜ Planned     | Observed native call surface                      |
-| `ui` (viewmodels + Win32) | ⬜ Planned      | Not started                                       |
+| `ui` · Viewmodels         | 🟡 Partial      | `IView`/`IViewModel` contracts; `ProcessExplorerVM` (rows, tree, CPU %, on-demand details); other tabs pending |
+| `ui` · Win32 views        | ⬜ Planned      | Not started                                       |
 | `app` (entry point)       | ⬜ Planned      | Not started                                       |
 | Tests                     | ⬜ Planned      | CMake wiring ready; `tests/` not yet added        |
 | Documentation             | 🟡 In progress  | This README; per-module docs pending              |
@@ -168,9 +174,11 @@ Legend: ✅ done · 🟡 partial · ⬜ planned
 
 The design keeps the testable layers isolated so they can be exercised without
 live OS state: the `common` primitives (`Result`, RAII wrappers, hex formatting)
-are self-contained, and the `core` domain logic depends only on the `INativeApi`
-seam, so it can run against a fake native backend instead of the real `ntdll`.
-The CMake test wiring is in place and guarded on `WIS_BUILD_TESTS`, but the
+are self-contained, the `core` domain logic depends only on the `INativeApi`
+seam, so it can run against a fake native backend instead of the real `ntdll`,
+and the `ui` viewmodels are Win32-free with explicit test seams (e.g.
+`ProcessExplorerVM::refreshAt` takes the sampling instant, so CPU deltas are
+deterministic). The CMake test wiring is in place and guarded on `WIS_BUILD_TESTS`, but the
 `tests/` tree and its suites have not been added yet. Once they land:
 
 ```powershell
@@ -184,11 +192,12 @@ ctest --preset vs2022-debug
 1. Finish the remaining `core` module: Native API monitor.
 2. Add process/thread control (terminate, suspend, resume) behind explicit
    confirmation, kept separate from the read-only enumeration paths.
-3. Thread stack walking with symbol resolution (`dbghelp` / `SymbolResolver`).
-4. Stand up the `tests/` tree: `common` unit tests plus `core` suites driven by
-   a fake `INativeApi`.
-5. Build the Win32 UI: viewmodels first (testable, Win32-free), then the view
-   backend, with enumeration moved off the UI thread.
+3. Thread stack walking on top of the existing `SymbolResolver`.
+4. Stand up the `tests/` tree: `common` unit tests plus `core`/`ui` suites
+   driven by a fake `INativeApi`.
+5. Build out the UI: remaining viewmodels (threads, memory, modules, handles,
+   …) alongside `ProcessExplorerVM`, then the Win32 view backend, with
+   enumeration moved off the UI thread.
 6. Optional extras: Capstone disassembly, report export (JSON/HTML), light/dark
    themes, plugins.
 
