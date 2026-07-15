@@ -20,6 +20,7 @@ add_library(wis_core STATIC
     src/heap/HeapInspector.cpp
     src/pebteb/PebTebReader.cpp
     src/system/SystemInfoProvider.cpp
+    src/symbols/SymbolResolver.cpp
 )
 
 add_library(wis::core ALIAS wis_core)
@@ -40,4 +41,5 @@ target_link_libraries(wis_core
         wintrust   # WinVerifyTrust (Authenticode)
         crypt32    # certificate context extraction
         advapi32   # token / SID / privilege APIs
+        dbghelp    # symbol resolution (SymInitialize / SymFromAddr / SymGetLineFromAddr64)
 )
