@@ -42,6 +42,11 @@ public:
     [[nodiscard]] virtual Result<SystemBasicInformation, ErrorCode>
     querySystemBasicInformation() const = 0;
 
+    [[nodiscard]] virtual Result<std::vector<std::byte>, ErrorCode> queryPagefileSnapshot()
+        const = 0;
+
+    [[nodiscard]] virtual Result<RTL_OSVERSIONINFOEXW, ErrorCode> queryOsVersion() const = 0;
+
     // --- Process ---
     [[nodiscard]] virtual Result<Handle, ErrorCode> openProcess(
         std::uint32_t pid, ACCESS_MASK desiredAccess) const = 0;

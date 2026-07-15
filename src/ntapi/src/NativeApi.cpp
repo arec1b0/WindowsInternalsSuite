@@ -28,6 +28,14 @@ public:
         return system_info::queryBasic();
     }
 
+    Result<std::vector<std::byte>, ErrorCode> queryPagefileSnapshot() const override {
+        return system_info::queryPagefiles();
+    }
+
+    Result<RTL_OSVERSIONINFOEXW, ErrorCode> queryOsVersion() const override {
+        return system_info::queryOsVersion();
+    }
+
     Result<Handle, ErrorCode> openProcess(std::uint32_t pid,
                                           ACCESS_MASK desiredAccess) const override {
         return process_info::open(pid, desiredAccess);

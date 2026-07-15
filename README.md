@@ -7,8 +7,8 @@ one modular, extensible tool.
 
 > **Status: in development.** The `common` and `ntapi` layers are complete, and
 > most of the `core` domain layer is implemented and building — the process,
-> thread, memory, PE, module, handle, token, heap, and PEB/TEB readers all land through the
-> `INativeApi` seam. The remaining `core` modules (System info, Native API monitor), the UI,
+> thread, memory, PE, module, handle, token, heap, PEB/TEB, and system info providers all land through the
+> `INativeApi` seam. The remaining `core` module (Native API monitor), the UI,
 > the app entry point, and the test suites are not started yet. See
 > [Project status](#project-status) for the exact per-module state — the tree in
 > [Architecture](#architecture) shows the *target* design, not what is shipped today.
@@ -95,7 +95,7 @@ app            composition root: wires the dependency graph, owns main()
  │
 ui             Win32-free viewmodels + a swappable Win32 view backend
  │
-core           domain logic: process/thread/memory/pe/handle/token/heap/pebteb/... managers & readers
+core           domain logic: process/thread/memory/pe/handle/token/heap/pebteb/system/... managers & providers
  │
 ntapi          typed wrappers over ntdll, behind the INativeApi interface
  │
@@ -105,7 +105,7 @@ common         cross-cutting primitives: Result<T,E>, RAII, logging, text
 ### Design principles
 
 - **SOLID**, applied pragmatically. The most load-bearing part is DIP: `core`
-  and `ui` depend on interfaces (`INativeApi`, `IProcessManager`, `ITokenInspector`, `IHeapInspector`, `IPebTebReader`, …), never on
+  and `ui` depend on interfaces (`INativeApi`, `IProcessManager`, `ITokenInspector`, `IHeapInspector`, `IPebTebReader`, `ISystemInfoProvider`, …), never on
   concrete implementations.
 - **RAII everywhere** for OS resources — handles, `LocalAlloc` buffers,
   `VirtualAlloc` regions, and token privileges each have an owning wrapper.
@@ -124,7 +124,7 @@ WindowsInternalsSuite/
 ├── src/
 │   ├── common/       Result, RAII, logger, encoding, hex, mapped file
 │   ├── ntapi/        NtDll binding, native structs, INativeApi seam
-│   ├── core/         domain managers/readers (process, thread, memory, pe, handle, token, heap, pebteb, ...)
+│   ├── core/         domain managers/providers (process, thread, memory, pe, handle, token, heap, pebteb, system, ...)
 │   ├── ui/           viewmodels + Win32 views
 │   └── app/          main(), composition root, manifest, resources
 ├── tests/            unit tests (GoogleTest) + native-API fakes
@@ -153,7 +153,7 @@ tracks reality, not intent.
 | `core` · Token            | ✅ Done         | SID, integrity, privileges, groups                |
 | `core` · Heap             | ✅ Done         | Heap segments and allocated blocks                |
 | `core` · PEB/TEB          | ✅ Done         | Process/thread environment blocks                 |
-| `core` · System info      | ⬜ Planned      | CPU, NUMA, RAM, cache, uptime, pagefile           |
+| `core` · System info      | ✅ Done         | CPU, NUMA, RAM, cache, OS version, uptime, pagefile|
 | `core` · Native API monitor| ⬜ Planned     | Observed native call surface                      |
 | `ui` (viewmodels + Win32) | ⬜ Planned      | Not started                                       |
 | `app` (entry point)       | ⬜ Planned      | Not started                                       |
@@ -181,7 +181,7 @@ ctest --preset vs2022-debug
 
 ## Roadmap
 
-1. Finish the remaining `core` modules: System info and Native API monitor.
+1. Finish the remaining `core` module: Native API monitor.
 2. Add process/thread control (terminate, suspend, resume) behind explicit
    confirmation, kept separate from the read-only enumeration paths.
 3. Thread stack walking with symbol resolution (`dbghelp` / `SymbolResolver`).

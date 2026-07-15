@@ -47,4 +47,33 @@ Result<SystemBasicInformation, ErrorCode> queryBasic() {
     return info;
 }
 
+Result<std::vector<std::byte>, ErrorCode> queryPagefiles() {
+    const auto fn = NtDll::instance().querySystemInformation();
+    if (fn == nullptr) {
+        return makeUnexpected(ErrorCode::application("NtQuerySystemInformation unavailable"));
+    }
+    // A system with no pagefile returns STATUS_SUCCESS with a zero-length buffer;
+    // 4 KiB initial comfortably fits the handful of pagefiles a system can have.
+    return detail::queryIntoGrowingBuffer<ULONG>(
+        [&](void* buffer, ULONG length, ULONG* returnLength) {
+            return fn(SystemInformationClass::Pagefile, buffer, length, returnLength);
+        },
+        0x1000);
+}
+
+Result<RTL_OSVERSIONINFOEXW, ErrorCode> queryOsVersion() {
+    const auto fn = NtDll::instance().getVersion();
+    if (fn == nullptr) {
+        return makeUnexpected(ErrorCode::application("RtlGetVersion unavailable"));
+    }
+
+    RTL_OSVERSIONINFOEXW info{};
+    info.dwOSVersionInfoSize = sizeof(info);
+    const NtStatus status = fn(&info);
+    if (!ntSuccess(status)) {
+        return makeUnexpected(ErrorCode::fromNtStatus(status));
+    }
+    return info;
+}
+
 }  // namespace wis::ntapi::system_info

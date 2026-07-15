@@ -41,6 +41,7 @@ NtDll::NtDll() {
         resolve<RtlQueryProcessDebugInformationFn>(ntdll, "RtlQueryProcessDebugInformation");
     destroyQueryDebugBuffer_ =
         resolve<RtlDestroyQueryDebugBufferFn>(ntdll, "RtlDestroyQueryDebugBuffer");
+    getVersion_ = resolve<RtlGetVersionFn>(ntdll, "RtlGetVersion");
 }
 
 const NtDll& NtDll::instance() {

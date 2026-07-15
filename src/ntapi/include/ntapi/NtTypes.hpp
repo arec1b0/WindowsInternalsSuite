@@ -51,6 +51,7 @@ enum class SystemInformationClass : ULONG {
     Basic            = 0,   // SYSTEM_BASIC_INFORMATION
     Process          = 5,   // SYSTEM_PROCESS_INFORMATION (+ thread array)
     Handle           = 16,  // SYSTEM_HANDLE_INFORMATION (legacy)
+    Pagefile         = 18,  // SYSTEM_PAGEFILE_INFORMATION (chain)
     ExtendedHandle   = 64,  // SYSTEM_HANDLE_INFORMATION_EX
 };
 
@@ -430,5 +431,18 @@ namespace teb_offsets {
 constexpr std::uint32_t TlsSlotsX64 = 0x1480;  // PVOID TlsSlots[64]
 constexpr std::uint32_t TlsSlotCount = 64;     // TLS_MINIMUM_AVAILABLE
 }  // namespace teb_offsets
+
+// -----------------------------------------------------------------------------
+// Pagefile information (SystemPagefileInformation)
+// -----------------------------------------------------------------------------
+
+// Variable-length record chain; sizes are expressed in pages, not bytes.
+struct SystemPagefileInformation {
+    ULONG NextEntryOffset;
+    ULONG TotalSize;    // pages
+    ULONG TotalInUse;   // pages
+    ULONG PeakUsage;    // pages
+    UnicodeString PageFileName;
+};
 
 }  // namespace wis::ntapi

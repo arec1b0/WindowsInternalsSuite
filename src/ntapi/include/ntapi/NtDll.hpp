@@ -96,6 +96,10 @@ using RtlQueryProcessDebugInformationFn =
 
 using RtlDestroyQueryDebugBufferFn = NtStatus(NTAPI*)(PVOID debugBuffer);
 
+// RtlGetVersion reports the true OS version, unaffected by the manifest-based
+// version shimming that GetVersionEx is subject to.
+using RtlGetVersionFn = NtStatus(NTAPI*)(RTL_OSVERSIONINFOEXW* versionInformation);
+
 // Resolved ntdll entry points. Accessed as an immutable singleton.
 class NtDll {
 public:
@@ -140,6 +144,7 @@ public:
     [[nodiscard]] RtlDestroyQueryDebugBufferFn destroyQueryDebugBuffer() const noexcept {
         return destroyQueryDebugBuffer_;
     }
+    [[nodiscard]] RtlGetVersionFn getVersion() const noexcept { return getVersion_; }
 
 private:
     NtDll();
@@ -158,6 +163,7 @@ private:
     RtlCreateQueryDebugBufferFn createQueryDebugBuffer_ = nullptr;
     RtlQueryProcessDebugInformationFn queryProcessDebugInformation_ = nullptr;
     RtlDestroyQueryDebugBufferFn destroyQueryDebugBuffer_ = nullptr;
+    RtlGetVersionFn getVersion_ = nullptr;
 };
 
 }  // namespace wis::ntapi

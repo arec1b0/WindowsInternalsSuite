@@ -19,6 +19,7 @@ add_library(wis_core STATIC
     src/token/TokenInspector.cpp
     src/heap/HeapInspector.cpp
     src/pebteb/PebTebReader.cpp
+    src/system/SystemInfoProvider.cpp
 )
 
 add_library(wis::core ALIAS wis_core)
