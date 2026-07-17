@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "core/process/IProcessManager.hpp"
+#include "ui/detail/CpuSampler.hpp"
 #include "ui/interfaces/IViewModel.hpp"
 
 namespace wis::ui {
@@ -84,21 +85,13 @@ public:
     [[nodiscard]] const ProcessRow* findRow(std::uint32_t pid) const;
 
 private:
-    // Per-PID CPU baseline carried between refreshes.
-    struct CpuSample {
-        std::uint64_t cpuTime100ns = 0;  // kernel + user
-        std::uint64_t createTime = 0;    // guards against PID reuse
-    };
-
     void rebuildTree();
 
     const core::IProcessManager& manager_;
-    std::uint32_t processorCount_ = 1;
+    detail::CpuSampler cpuSampler_;
 
     std::vector<ProcessRow> rows_;
     ProcessTree tree_;
-    std::unordered_map<std::uint32_t, CpuSample> previousSamples_;
-    std::optional<std::chrono::steady_clock::time_point> previousSampleTime_;
 
     std::optional<std::uint32_t> selectedPid_;
     ProcessDetailsRow details_;

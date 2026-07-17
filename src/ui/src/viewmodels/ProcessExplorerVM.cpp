@@ -1,47 +1,16 @@
 #include "ui/viewmodels/ProcessExplorerVM.hpp"
 
 #include <algorithm>
-#include <cstdio>
-#include <unordered_set>
+#include <unordered_map>
 #include <utility>
 
+#include "ui/detail/Format.hpp"
+
 namespace wis::ui {
-namespace {
-
-// Formats a byte count with a binary-prefix unit, e.g. "184.2 MB".
-std::string formatBytes(std::uint64_t bytes) {
-    constexpr const char* units[] = {"B", "KB", "MB", "GB", "TB", "PB"};
-    constexpr std::size_t unitCount = sizeof(units) / sizeof(units[0]);
-
-    auto value = static_cast<double>(bytes);
-    std::size_t unit = 0;
-    while (value >= 1024.0 && unit + 1 < unitCount) {
-        value /= 1024.0;
-        ++unit;
-    }
-
-    char buffer[64] = {};
-    // Whole bytes read better without a fractional part.
-    if (unit == 0) {
-        std::snprintf(buffer, sizeof(buffer), "%llu B",
-                      static_cast<unsigned long long>(bytes));
-    } else {
-        std::snprintf(buffer, sizeof(buffer), "%.1f %s", value, units[unit]);
-    }
-    return std::string(buffer);
-}
-
-std::string formatPercent(double percent) {
-    char buffer[32] = {};
-    std::snprintf(buffer, sizeof(buffer), "%.1f", percent);
-    return std::string(buffer);
-}
-
-}  // namespace
 
 ProcessExplorerVM::ProcessExplorerVM(const core::IProcessManager& manager,
                                      std::uint32_t processorCount)
-    : manager_(manager), processorCount_(processorCount > 0 ? processorCount : 1) {}
+    : manager_(manager), cpuSampler_(processorCount) {}
 
 void ProcessExplorerVM::refresh() { refreshAt(std::chrono::steady_clock::now()); }
 
@@ -55,18 +24,7 @@ void ProcessExplorerVM::refreshAt(std::chrono::steady_clock::time_point now) {
     clearError();
 
     const std::vector<core::ProcessInfo>& processes = snapshotResult.value();
-
-    // Elapsed wall time since the previous sample, in 100 ns units, matching the
-    // unit of the kernel/user time counters.
-    std::uint64_t elapsed100ns = 0;
-    if (previousSampleTime_) {
-        const auto delta =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(now - *previousSampleTime_);
-        elapsed100ns = static_cast<std::uint64_t>(delta.count() / 100);
-    }
-
-    std::unordered_map<std::uint32_t, CpuSample> currentSamples;
-    currentSamples.reserve(processes.size());
+    cpuSampler_.beginRound(now);
 
     std::vector<ProcessRow> rows;
     rows.reserve(processes.size());
@@ -82,42 +40,20 @@ void ProcessExplorerVM::refreshAt(std::chrono::steady_clock::time_point now) {
         row.createTime = process.createTime;
 
         row.workingSetBytes = process.workingSetBytes;
-        row.workingSetText = formatBytes(process.workingSetBytes);
+        row.workingSetText = detail::formatBytes(process.workingSetBytes);
         row.privateBytes = process.privateBytes;
-        row.privateText = formatBytes(process.privateBytes);
+        row.privateText = detail::formatBytes(process.privateBytes);
 
-        const std::uint64_t cpuTime = process.kernelTime + process.userTime;
-        currentSamples.emplace(process.pid, CpuSample{cpuTime, process.createTime});
-
-        // CPU usage needs a prior sample for the same process instance. A PID
-        // whose createTime changed is a different process that reused the id,
-        // so its old baseline must not be applied.
-        row.cpuText = "-";
-        if (elapsed100ns > 0) {
-            const auto previous = previousSamples_.find(process.pid);
-            if (previous != previousSamples_.end() &&
-                previous->second.createTime == process.createTime &&
-                cpuTime >= previous->second.cpuTime100ns) {
-                const std::uint64_t cpuDelta = cpuTime - previous->second.cpuTime100ns;
-                const double capacity =
-                    static_cast<double>(elapsed100ns) * static_cast<double>(processorCount_);
-                double percent = (capacity > 0.0)
-                                     ? (static_cast<double>(cpuDelta) / capacity) * 100.0
-                                     : 0.0;
-                // Scheduling jitter between the two samples can push the ratio a
-                // hair over 100; clamp rather than display an impossible number.
-                percent = std::clamp(percent, 0.0, 100.0);
-                row.cpuPercent = percent;
-                row.cpuText = formatPercent(percent);
-            }
-        }
+        const detail::CpuUsage usage = cpuSampler_.update(
+            process.pid, process.kernelTime + process.userTime, process.createTime);
+        row.cpuPercent = usage.percent;
+        row.cpuText = usage.measured ? detail::formatPercent(usage.percent) : "-";
 
         rows.push_back(std::move(row));
     }
 
+    cpuSampler_.endRound();
     rows_ = std::move(rows);
-    previousSamples_ = std::move(currentSamples);
-    previousSampleTime_ = now;
 
     rebuildTree();
 

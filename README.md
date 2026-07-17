@@ -9,10 +9,10 @@ one modular, extensible tool.
 > most of the `core` domain layer is implemented and building — the process,
 > thread, memory, PE, module, handle, token, heap, PEB/TEB, system info, and
 > symbol resolution providers all land through the `INativeApi` seam (symbols
-> via `dbghelp`). The `ui` layer has started: the Win32-free viewmodel contracts
-> and the first view model (`ProcessExplorerVM`) are in place, but the Win32
-> view backend is not. The remaining `core` module (Native API monitor), the
-> Win32 views, the app entry point, and the test suites are not started yet. See
+> via `dbghelp`). The `ui` layer has started: the Win32-free viewmodel contracts,
+> the shared CPU sampler/formatters, and the first view models (`ProcessExplorerVM`
+> and `ThreadExplorerVM`) are in place, but the Win32 view backend is not.
+> The remaining `core` module (Native API monitor), the Win32 views, the app entry point, and the test suites are not started yet. See
 > [Project status](#project-status) for the exact per-module state — the tree in
 > [Architecture](#architecture) shows the *target* design, not what is shipped today.
 
@@ -139,9 +139,10 @@ WindowsInternalsSuite/
 ## Project status
 
 The foundation and most of the `core` domain layer are implemented and building,
-and the first slice of the `ui` layer (viewmodel contracts + `ProcessExplorerVM`)
-is in place; the Native API monitor, the Win32 views, the app entry point, and
-the tests are not started. This table tracks reality, not intent.
+and the first slice of the `ui` layer (viewmodel contracts + `ProcessExplorerVM`
+and `ThreadExplorerVM`) is in place; the Native API monitor, the Win32 views,
+the app entry point, and the tests are not started. This table tracks reality,
+not intent.
 
 | Layer / module            | State           | Notes                                             |
 | ------------------------- | --------------- | ------------------------------------------------- |
@@ -160,7 +161,7 @@ the tests are not started. This table tracks reality, not intent.
 | `core` · System info      | ✅ Done         | CPU, NUMA, RAM, cache, OS version, uptime, pagefile|
 | `core` · Symbols          | ✅ Done         | dbghelp address→`module!symbol+offset`, thread-safe|
 | `core` · Native API monitor| ⬜ Planned     | Observed native call surface                      |
-| `ui` · Viewmodels         | 🟡 Partial      | `IView`/`IViewModel` contracts; `ProcessExplorerVM` (rows, tree, CPU %, on-demand details); other tabs pending |
+| `ui` · Viewmodels         | 🟡 Partial      | `IView`/`IViewModel` contracts; `ProcessExplorerVM` and `ThreadExplorerVM` (rows, CPU %, on-demand details); shared `CpuSampler` and `Format` helpers; other tabs pending |
 | `ui` · Win32 views        | ⬜ Planned      | Not started                                       |
 | `app` (entry point)       | ⬜ Planned      | Not started                                       |
 | Tests                     | ⬜ Planned      | CMake wiring ready; `tests/` not yet added        |
@@ -195,9 +196,9 @@ ctest --preset vs2022-debug
 3. Thread stack walking on top of the existing `SymbolResolver`.
 4. Stand up the `tests/` tree: `common` unit tests plus `core`/`ui` suites
    driven by a fake `INativeApi`.
-5. Build out the UI: remaining viewmodels (threads, memory, modules, handles,
-   …) alongside `ProcessExplorerVM`, then the Win32 view backend, with
-   enumeration moved off the UI thread.
+5. Build out the UI: remaining viewmodels (memory, modules, handles, …)
+   alongside `ProcessExplorerVM` and `ThreadExplorerVM`, then the Win32 view backend,
+   with enumeration moved off the UI thread.
 6. Optional extras: Capstone disassembly, report export (JSON/HTML), light/dark
    themes, plugins.
 

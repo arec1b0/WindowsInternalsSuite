@@ -7,6 +7,7 @@
 
 add_library(wis_ui STATIC
     src/viewmodels/ProcessExplorerVM.cpp
+    src/viewmodels/ThreadExplorerVM.cpp
 )
 
 add_library(wis::ui ALIAS wis_ui)
